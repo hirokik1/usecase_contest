@@ -27,7 +27,7 @@ cors_origins = os.environ.get('CORS_ORIGINS', '*').split(',')
 print(cors_origins)
 
 app = Flask(__name__)
-socketio = SocketIO(app, async_mode='threading', logger=True, engineio_logger=True, cors_allowed_origins=cors_origins)
+socketio = SocketIO(app, async_mode='eventlet', logger=True, engineio_logger=True, cors_allowed_origins=cors_origins)
 CORS(app, origins=cors_origins)
 
 # IBM Watson Speech to Textサービスの設定
