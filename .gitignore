@@ -1,4 +1,4 @@
-# .gitignore
+.gitignore
 venv/
 memo.py
 sample.json
