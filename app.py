@@ -1,5 +1,5 @@
 from pydub import AudioSegment
-from flask import Flask, render_template, redirect
+from flask import Flask, render_template
 from flask_cors import CORS
 from ibm_watson import SpeechToTextV1
 from ibm_watson import NaturalLanguageUnderstandingV1
@@ -9,7 +9,6 @@ from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
 from ibm_cloud_sdk_core import get_authenticator_from_environment
 from flask_socketio import SocketIO, emit
 from dotenv import load_dotenv
-from auth import AppIDAuthProvider
 import datetime
 import io
 import os
@@ -26,9 +25,6 @@ wd_url = os.getenv('WD_URL')
 wd_project_id = os.getenv('WD_PROJECT_ID')
 cors_origins = os.environ.get('CORS_ORIGINS', '*').split(',')
 print(cors_origins)
-
-auth = AppIDAuthProvider()
-flask = auth.flask
 
 app = Flask(__name__)
 socketio = SocketIO(app, async_mode='eventlet', logger=True, engineio_logger=True, cors_allowed_origins=cors_origins)
@@ -220,19 +216,10 @@ def handle_audio(audio_data):
     emit('response', response_data)
     print(response_data)
     
-@flask.route("/")
+@app.route('/')
 def index():
-    return redirect("/auth_route")
-
-@flask.route("/auth_route")
-@auth.check
-def auth_route():
     return render_template('index.html')
 
-@flask.route("/noauth_route")
-def noauth_route():
-    return "This route is open to all!"
-
 if __name__ == '__main__':
-    socketio.run(app, host="0.0.0.0", port=8080, debug=True)
+    socketio.run(app, port=8080, debug=True)
 
