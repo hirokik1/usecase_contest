@@ -14,4 +14,4 @@ COPY . .
 EXPOSE 8080
 
 # アプリケーションの実行コマンド
-CMD ["python", "navichang.py"]
+CMD ["python", "app.py"]
