@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.png') }}">
+    <title>realtime search</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .button-container {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            gap: 40px
+        }
+
+        button {
+            padding: 10px;
+            width: 150px;
+            height: 150px;
+            font-size: 16px;
+            border: none;
+            border-radius: 10%;
+            background-color: #007bff;
+            color: #fff;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            box-shadow: 8px 8px 16px 0 rgba(0, 0, 0, 0.2);
+        }
+
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #responseText {
+            width: 60%;
+            /* 画面の幅の60%を使用 */
+            margin: 0 auto;
+            /* 中央揃え */
+            word-wrap: break-word;
+            /* 必要に応じて単語を折り返し */
+        }
+
+        #responseText {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .result-card {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+        }
+
+        .result-card h2 {
+            margin-top: 0;
+            color: #007bff;
+        }
+
+        em {
+            background-color: #e0b0ff;
+            font-style: normal;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>ナビちゃん</h1>
+    <div class="button-container">
+        <button onclick="startRecording()">Start</button>
+        <button onclick="stopRecording()">Stop</button>
+    </div>
+    <div id="responseText"></div>
+
+    <script src="https://cdn.socket.io/4.2.0/socket.io.min.js"></script>
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.0/dist/ffmpeg.min.js"></script>
+    <script>
+        const socket = io('http://localhost:8080/');
+        let audioChunks = [];
+        let isStopping = false;
+        let nIntervId = null;
+        let stream;
+        let mediaRecorder1;
+        let mediaRecorder2;
+        let currentRecorder = 1;
+
+        async function initializeMediarecoreder() {
+
+
+            if (currentRecorder === 1) {
+                if (mediaRecorder1 && mediaRecorder1.state === "recording") {
+                    mediaRecorder1.stop();
+                }
+                mediaRecorder1 = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                mediaRecorder1.addEventListener("dataavailable", handleDataAvailable);
+                mediaRecorder1.addEventListener("stop", handleStop);
+                mediaRecorder1.start();
+                console.log("mediaRecorder1 started");
+                setTimeout(() => {
+                    mediaRecorder1.stop();
+                }, 11000);
+            } else {
+                if (mediaRecorder2 && mediaRecorder2.state === "recording") {
+                    mediaRecorder2.stop();
+                }
+                mediaRecorder2 = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                mediaRecorder2.addEventListener("dataavailable", handleDataAvailable);
+                mediaRecorder2.addEventListener("stop", handleStop);
+                mediaRecorder2.start();
+                console.log("mediaRecorder2 started");
+                setTimeout(() => {
+                    mediaRecorder2.stop();
+                }, 11000);
+            }
+            audioChunks = [];
+        }
+
+        async function startRecording() {
+            socket.connect();
+            let counter = 0;
+            // Start the first recorder immediately
+            currentRecorder = 1;
+
+            
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                } catch (err) {
+                    console.error(err);
+                    alert('音声入力デバイスの取得に失敗しました。');
+                    return;
+                }
+            
+
+            await initializeMediarecoreder();
+
+            // Update the recorder every second
+            nIntervId = setInterval(async () => {
+                counter += 1;
+
+                // Switch the recorder every 10 seconds
+                if (counter % 10 === 0) {
+                    currentRecorder = 3 - currentRecorder;
+                    await initializeMediarecoreder();
+                }
+
+                // Stop the recording 1 second after the next recording has started
+                if (counter % 10 === 1) {
+                    if (currentRecorder === 1 && mediaRecorder2 && mediaRecorder2.state === "recording") {
+                        mediaRecorder2.stop();
+                    } else if (currentRecorder === 2 && mediaRecorder1 && mediaRecorder1.state === "recording") {
+                        mediaRecorder1.stop();
+                    }
+                }
+            }, 1000);
+        }
+
+
+
+
+        function handleDataAvailable(event) {
+            audioChunks.push(event.data);
+            const audioBlob = new Blob(audioChunks, {
+                type: 'audio/webm'
+            });
+            audioChunks = [];
+            createAudioDataSegment(audioBlob);
+        }
+
+        function handleStop() {
+            if (!isStopping) return;
+            console.log("MediaRecorder stopped");
+            setTimeout(() => {
+                // socket.disconnect();
+                isStopping = false;
+                audioChunks = [];
+            }, 10000);
+        }
+
+        async function createAudioDataSegment(blob) {
+            console.log(`Sending audio data with type: ${blob.type}`);
+            const arrayBuffer = await blob.arrayBuffer();
+            socket.emit('audio', arrayBuffer);
+        }
+
+        function stopRecording() {
+            isStopping = true;
+            clearInterval(nIntervId);
+            nIntervId = null;
+
+            [mediaRecorder1, mediaRecorder2].forEach(mediaRecorder => {
+                if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                    mediaRecorder.stop();
+                    mediaRecorder.removeEventListener("dataavailable", handleDataAvailable);
+                    mediaRecorder.removeEventListener("stop", handleStop);
+                    mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                }
+            });
+
+            // Reset the mediaRecorder1 and mediaRecorder2
+            mediaRecorder1 = null;
+            mediaRecorder2 = null;
+
+            console.log("recording stopped");
+        }
+
+        // サーバレスポンスを画面に表示
+        socket.on('response', function (data) {
+            const responseText = document.getElementById('responseText');
+            data.forEach(({ keyword, results }) => {
+                const resultCard = document.createElement('div');
+                resultCard.classList.add('result-card');
+
+                const keywordHeading = document.createElement('h2');
+                keywordHeading.textContent = `Keyword: ${keyword}`;
+                resultCard.appendChild(keywordHeading);
+
+                const resultList = document.createElement('ul');
+                results.forEach(result => {
+                    const listItem = document.createElement('li');
+                    listItem.innerHTML = result;
+                    resultList.appendChild(listItem);
+                });
+                resultCard.appendChild(resultList);
+
+                responseText.prepend(resultCard);
+            });
+        });
+    </script>
+</body>
+
+
+</html>
