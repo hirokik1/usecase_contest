@@ -10,7 +10,11 @@ import requests
 from requests.auth import HTTPBasicAuth
 from requests.structures import CaseInsensitiveDict
 
+from dotenv import load_dotenv
+
 class AppIDAuthProvider:
+
+    load_dotenv()
 
     # App ID
 

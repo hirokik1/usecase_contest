@@ -30,9 +30,8 @@ print(cors_origins)
 auth = AppIDAuthProvider()
 flask = auth.flask
 
-app = Flask(__name__)
-socketio = SocketIO(app, async_mode='eventlet', logger=True, engineio_logger=True, cors_allowed_origins=cors_origins)
-CORS(app, origins=cors_origins)
+socketio = SocketIO(flask, async_mode='eventlet', logger=True, engineio_logger=True, cors_allowed_origins=cors_origins)
+CORS(flask, origins=cors_origins)
 
 # IBM Watson Speech to Textサービスの設定
 authenticator = IAMAuthenticator(stt_apikey)
@@ -234,5 +233,5 @@ def noauth_route():
     return "This route is open to all!"
 
 if __name__ == '__main__':
-    socketio.run(app, host="0.0.0.0", port=8080, debug=True)
+    socketio.run(flask, port=8080, debug=True)
 
