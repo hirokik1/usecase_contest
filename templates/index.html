@@ -19,6 +19,8 @@
         h1 {
             margin-bottom: 20px;
             color: #333;
+            font-size: 64px;
+            text-align: center;
         }
 
         .button-container {
@@ -32,7 +34,7 @@
             padding: 10px;
             width: 150px;
             height: 150px;
-            font-size: 16px;
+            font-size: 64px;
             border: none;
             border-radius: 10%;
             background-color: #007bff;
@@ -83,10 +85,9 @@
 </head>
 
 <body>
-    <h1>ナビちゃん</h1>
+    <h1>対面営業支援システム<br>「ナビちゃん」</h1>
     <div class="button-container">
-        <button onclick="startRecording()">Start</button>
-        <button onclick="stopRecording()">Stop</button>
+        <button id="recordButton" onclick="toggleRecording()"></button>
     </div>
     <div id="responseText"></div>
 
@@ -220,6 +221,26 @@
 
             console.log("recording stopped");
         }
+
+        function toggleRecording() {
+            const recordButton = document.getElementById("recordButton");
+            if (isRecording) {
+                // If recording, stop it
+                stopRecording();
+                // Change the button's text to "▶"
+                recordButton.textContent = "\u25B6"; // Unicode for "▶"
+                recordButton.style.backgroundColor = "#007bff";
+            } else {
+                // If not recording, start it
+                startRecording();
+                // Change the button's text to "⏸"
+                recordButton.textContent = "\u23F8"; // Unicode for "⏸"
+                recordButton.style.backgroundColor = "red";
+            }
+            // Flip the isRecording boolean
+            isRecording = !isRecording;
+        }
+        document.getElementById("recordButton").textContent = "\u25B6"; // Unicode for "▶"
 
         // サーバレスポンスを画面に表示
         socket.on('response', function (data) {
