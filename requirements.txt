@@ -16,7 +16,7 @@ exceptiongroup==1.1.1
 Flask==2.3.2
 Flask-Cors==3.0.10
 Flask-SocketIO==5.3.4
-fonttools==4.38.0
+fonttools==4.43.0
 greenlet==2.0.2
 h11==0.14.0
 ibm-cloud-sdk-core==3.16.1
